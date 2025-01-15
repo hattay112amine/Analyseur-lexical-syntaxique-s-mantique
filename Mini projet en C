@@ -1,0 +1,386 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#define program 1
+#define id 2
+#define Begin 3
+#define End 4
+#define var 5
+#define integer 6
+#define writeln 7
+#define readln 8
+#define iff 9
+#define then 10
+#define Endif 11
+#define nb 12
+#define pv 13
+#define oprel 14
+#define opadd 15
+#define po 16
+#define pf 17
+#define v 18
+#define pp 19
+#define aff 20
+#define dp 21
+#define opmul 22
+#define ppe 23
+#define dif 24
+#define ppq 25
+#define pgq 26
+#define pge 27
+#define ega 28
+#define oparith 29
+
+typedef struct unilex
+{
+    int ul;
+    int att;
+} unilex;
+
+int compteur = 0;
+int *c = &compteur;
+FILE *fp;
+int mot_cle[10] = {1, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+char tab_mot_cle[10][20] = {"program", "begin", "End", "var", "integer", "writeln", "readln", "iff", "then", "Endif"};
+char tab_iden[100][20];
+char car;
+unilex symbole;
+char ch[100] = ""; // Initialisation globale
+int z = 0;
+int pos = 0; // Position initiale
+
+void reculer(int k)
+{
+    fseek(fp, -k, SEEK_CUR);
+}
+
+char carsuivant()
+{
+    return fgetc(fp);
+}
+
+int unilexid()
+{
+    int k = 0;
+    int i = 0;
+    while (i < 10 && (!k))
+    {
+        if (strcmp(tab_mot_cle[i], ch) == 0)
+        {
+            printf("mot cle: %s\n", tab_mot_cle[i]);
+            k = 1;
+        }
+        else
+        {
+            i++;
+        }
+    }
+    if (k == 1)
+    {
+        printf("code mot cle:%d", mot_cle[i]);
+        return mot_cle[i];
+    }
+    else
+    {
+        return id;
+    }
+}
+
+int rangerid(int k, int *c)
+{
+    int s = 0;
+    if (k == id)
+    {
+        while ((strcmp(tab_iden[s], ch) != 0) && (s < (*c)))
+            s++;
+        if (s < *c)
+        {
+            return s;
+        }
+        else
+        {
+            (*c)++;
+            strcpy(tab_iden[*c], ch);
+            return *c;
+        }
+    }
+    else
+    {
+        return 0;
+    }
+}
+unilex analex()
+{
+    int etat = 0;
+    int colonne = 0, ligne = 1;
+    while (1)
+    {
+        switch (etat)
+        {
+        case 0:
+            car = carsuivant();
+            if (car == ' ')
+            {
+                colonne++;
+                etat = 0;
+                break;
+            }
+            else if (car == '\n')
+            {
+                ligne++;
+                colonne = 0;
+                etat = 0;
+                break;
+            }
+            else if (car == '\t')
+            {
+                colonne += 3;
+                etat = 0;
+                break;
+            }
+            else if (isalpha(car))
+            {
+                ch[pos] = car;
+                pos++;
+                ch[pos] = '\0'; // Terminer la chaîne avec un caractère nul
+                etat = 3;
+                break;
+            }
+            else if (isdigit(car))
+            {
+                z = 0;
+                ch[pos] = car;
+                pos++;
+                ch[pos] = '\0'; // Terminer la chaîne avec un caractère nul
+                etat = 1;
+                break;
+            }
+            else if (car == '<')
+            {
+                etat = 12;
+                break;
+            }
+            else if (car == '>')
+            {
+                etat = 15;
+                break;
+            }
+            else if (car == '=')
+            {
+                etat = 6;
+                break;
+            }
+            else if (car == '+' || car == '-' || car == '*' || car == '/')
+            {
+                etat = 7;
+                break;
+            }
+            else if (car == EOF)
+            {
+                printf("end of file\n");
+                etat = 10;
+                break;
+            }
+            else if (car == ';')
+            {
+                etat = 5;
+                break;
+            }
+            else if (car == ',')
+            {
+                etat = 18;
+                break;
+            }
+            else if (car == '(')
+            {
+                etat = 8;
+                break;
+            }
+            else if (car == ':')
+            {
+                etat = 20;
+                break;
+            }
+            else if (car == ')')
+            {
+                etat = 9;
+                break;
+            }
+            else
+            {
+                etat = 11;
+                break;
+            }
+            break;
+        case 1:
+            car = carsuivant();
+            if (isdigit(car))
+            {
+                z++;
+                ch[z] = car;
+                ch[z + 1] = '\0'; // Ajout du caractère de fin de chaîne
+                etat = 1;
+            }
+            else
+            {
+                z = 0;
+                etat = 2;
+            }
+            break;
+        case 2:
+            reculer(1);
+            symbole.ul = nb;
+            symbole.att = atoi(ch);
+            return symbole;
+        case 3:
+            car = carsuivant();
+            if (isalpha(car) || isdigit(car))
+            {
+                pos++;
+                ch[pos] = car;
+                ch[pos + 1] = '\0';
+                etat = 3;
+            }
+            else
+            {
+                etat = 4;
+                printf("Valeur de pos : %d\n", pos);
+                printf("this is the chaine:  %s", ch);
+                for (int i = 0; i <= 9; i++)
+                {
+                    printf("Caractère à l'indice %d : %c\n", i, ch[i]);
+                }
+            }
+            break;
+        case 4:
+            reculer(1);
+            ch[z + 1] = '\0';
+            symbole.ul = unilexid();
+            symbole.att = rangerid(symbole.ul, c);
+            return symbole;
+        case 5:
+            symbole.ul = pv;
+            symbole.att = 0;
+            return symbole;
+        case 6:
+            symbole.ul = oprel;
+            symbole.att = ega;
+            return symbole;
+        case 7:
+            symbole.ul = oparith;
+            symbole.att = 0;
+            return symbole;
+        case 8:
+            symbole.ul = po;
+            symbole.att = 0;
+            return symbole;
+        case 9:
+            symbole.ul = pf;
+            symbole.att = 0;
+            return symbole;
+        case 10:
+            symbole.ul = 100;
+            symbole.att = 0;
+            return symbole;
+        case 11:
+            printf("Erreur : caractère inattendu à la ligne %d, colonne %d\n", ligne, colonne);
+            etat = 0;
+            break;
+        case 12:
+            car = carsuivant();
+            switch (car)
+            {
+            case '=':
+                etat = 14;
+                break;
+            case '>':
+                etat = 13;
+                break;
+            }
+            break;
+        case 13:
+            symbole.ul = oprel;
+            symbole.att = dif;
+            return symbole;
+        case 14:
+            symbole.ul = oprel;
+            symbole.att = ppe;
+            return symbole;
+        case 15:
+            car = carsuivant();
+            if (car == '=')
+            {
+                etat = 16;
+                break;
+            }
+            else
+            {
+                etat = 17;
+                break;
+            }
+
+            break;
+        case 16:
+            symbole.ul = oprel;
+            symbole.att = pge;
+            return symbole;
+
+        case 17:
+            reculer(1);
+            symbole.ul = oprel;
+            symbole.att = pgq;
+            return symbole;
+        case 18:
+            symbole.ul = v;
+            symbole.att = 0;
+            return symbole;
+        case 19:
+            symbole.ul = pp;
+            symbole.att = 0;
+            return symbole;
+        case 20:
+            car = carsuivant();
+            if (car == '=')
+            {
+                etat = 21;
+                break;
+            }
+            else
+            {
+                etat = 22;
+                break;
+            }
+            break;
+        case 21:
+            symbole.ul = aff;
+            symbole.att = 0;
+            return symbole;
+        case 22:
+            reculer(1);
+            symbole.ul = dp;
+            symbole.att = 0;
+            return symbole;
+        }
+    }
+}
+
+int main()
+{
+    char ch1[100];
+    printf("donner le chemin pour votre fichier:\n");
+    scanf("%s", ch1);
+    fp = fopen(ch1, "r");
+    if (fp == NULL)
+    {
+        printf("Impossible d'ouvrir le fichier %s.\n", ch1);
+        return 1;
+    }
+    do
+    {
+        symbole = analex();
+        printf("\nSymbole: %d, Attribut: %d\n", symbole.ul, symbole.att);
+    } while (symbole.ul != 100);
+    fclose(fp);
+    return 0;
+}
